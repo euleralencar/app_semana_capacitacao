@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Ranking · Semana da Capacitação 2026{% endblock %}
+{% block content %}
+<section>
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div><h1 class="text-3xl font-bold">Ranking</h1><p class="mt-2 text-slate-600">Atualizado automaticamente a cada 5 segundos.</p></div>
+    <label class="w-full sm:w-72"><span class="sr-only">Buscar por matrícula</span><input id="ranking-search" class="field" maxlength="30" placeholder="Busque pela matrícula STF"></label>
+  </div>
+  <p id="ranking-status" class="mt-4 text-sm text-slate-500" aria-live="polite">Carregando ranking…</p>
+  <div class="mt-4 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
+    <table class="w-full text-left"><thead class="bg-slate-100 text-sm text-slate-700"><tr><th class="px-5 py-3">Posição</th><th class="px-5 py-3">Matrícula STF</th><th class="px-5 py-3 text-right">Pontos</th></tr></thead><tbody id="ranking-body"></tbody></table>
+  </div>
+</section>
+<script src="{{ url_for('static', filename='js/ranking.js') }}" defer></script>
+{% endblock %}
+

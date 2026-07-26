@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Inscrição · Semana da Capacitação 2026{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-xl">
+  <h1 class="text-3xl font-bold">Inscrição</h1>
+  <p class="mt-2 text-slate-600">Preencha seus dados para participar da Semana da Capacitação.</p>
+  {% if error %}<div class="mt-6 rounded-lg bg-red-50 p-4 text-red-800" role="alert">{{ error }}</div>{% endif %}
+  {% if success %}<div class="mt-6 rounded-lg bg-emerald-50 p-4 text-emerald-800" role="status">{{ success }}</div>{% endif %}
+  <form method="post" class="mt-6 space-y-5 rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+    <label class="block"><span class="text-sm font-medium">Nome completo</span><input required name="nome" value="{{ form_data.nome|default('') }}" maxlength="150" class="field" autocomplete="name"></label>
+    <label class="block"><span class="text-sm font-medium">Matrícula STF</span><input required name="matricula" value="{{ form_data.matricula|default('') }}" maxlength="30" class="field" autocomplete="off"></label>
+    <label class="block"><span class="text-sm font-medium">CPF</span><input required name="cpf" value="{{ form_data.cpf|default('') }}" inputmode="numeric" maxlength="14" class="field" autocomplete="off" placeholder="000.000.000-00"></label>
+    <label class="block"><span class="text-sm font-medium">Secretaria</span><input required name="secretaria" value="{{ form_data.secretaria|default('') }}" maxlength="120" class="field"></label>
+    <button class="button" type="submit">Realizar inscrição</button>
+  </form>
+</section>
+{% endblock %}
+
