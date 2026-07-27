@@ -1,8 +1,9 @@
 import os
+import logging
 from datetime import timedelta
 
-from flask import Flask, jsonify, redirect, render_template, request, url_for
-from psycopg.errors import UniqueViolation
+from flask import Flask, jsonify, redirect, render_template, request, url_for, make_response
+from psycopg.errors import UniqueViolation, IntegrityError
 
 from database import Database, DatabaseConfigurationError
 from validators import (
@@ -11,6 +12,9 @@ from validators import (
     validate_checkin,
     validate_registration,
 )
+
+# Configurar logging
+logger = logging.getLogger(__name__)
 
 
 def create_app():
@@ -44,18 +48,30 @@ def create_app():
                 participant,
             )
         except ValidationError as error:
+            logger.warning(f"Validation error in registration: {str(error)}")
             return render_template("inscricao.html", form_data=form_data, error=str(error)), 400
-        except UniqueViolation as error:
+        except IntegrityError as error:
             message = "Esta matrícula STF já está cadastrada."
-            if "participantes_cpf_key" in str(error):
+            if error.diag.constraint_name == "participantes_cpf_key":
                 message = "Este CPF já está cadastrado."
+                logger.warning(f"Duplicate CPF attempt: {form_data.get('cpf')[:3]}***")
+            else:
+                logger.warning(f"Duplicate matricula attempt: {form_data.get('matricula')}")
             return render_template("inscricao.html", form_data=form_data, error=message), 409
         except DatabaseConfigurationError:
+            logger.error("Database not configured in registration")
             return render_template(
                 "inscricao.html",
                 form_data=form_data,
                 error="O banco de dados ainda não foi configurado.",
             ), 503
+        except Exception as error:
+            logger.exception("Unexpected error in registration")
+            return render_template(
+                "inscricao.html",
+                form_data=form_data,
+                error="Erro interno do servidor.",
+            ), 500
 
         return render_template("inscricao.html", form_data={}, success="Inscrição realizada com sucesso!")
 
@@ -89,17 +105,29 @@ def create_app():
                 attendance,
             )
         except ValidationError as error:
+            logger.warning(f"Validation error in check-in: {str(error)}")
             return render_template("checkin.html", form_data=form_data, error=str(error)), 400
-        except UniqueViolation:
-            return render_template(
-                "checkin.html",
-                form_data=form_data,
-                error="Este check-in já foi registrado para esta palestra.",
-            ), 409
+        except IntegrityError as error:
+            if error.diag.constraint_name == "registros_presenca_matricula_codigo_palestra_key":
+                logger.warning(f"Duplicate check-in attempt: {form_data.get('matricula')} - {form_data.get('codigo_palestra')}")
+                return render_template(
+                    "checkin.html",
+                    form_data=form_data,
+                    error="Este check-in já foi registrado para esta palestra.",
+                ), 409
+            raise
         except DatabaseConfigurationError:
+            logger.error("Database not configured in check-in")
             return render_template(
                 "checkin.html", form_data=form_data, error="O banco de dados ainda não foi configurado."
             ), 503
+        except Exception as error:
+            logger.exception("Unexpected error in check-in")
+            return render_template(
+                "checkin.html",
+                form_data=form_data,
+                error="Erro interno do servidor.",
+            ), 500
 
         return render_template("checkin.html", form_data={}, success="Check-in registrado com sucesso!")
 
@@ -140,11 +168,19 @@ def create_app():
                 {"matricula": matricula},
             )
         except ValidationError as error:
+            logger.warning(f"Validation error in ranking API: {str(error)}")
             return jsonify({"error": str(error)}), 400
         except DatabaseConfigurationError:
+            logger.error("Database not configured in ranking API")
             return jsonify({"error": "O banco de dados ainda não foi configurado."}), 503
+        except Exception as error:
+            logger.exception("Unexpected error in ranking API")
+            return jsonify({"error": "Erro interno do servidor."}), 500
 
-        return jsonify({"ranking": rows})
+        # Adicionar cache headers para reduzir requisições desnecessárias
+        response = make_response(jsonify({"ranking": rows}))
+        response.headers["Cache-Control"] = "max-age=2, public"
+        return response
 
     return app
 
