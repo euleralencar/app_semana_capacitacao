@@ -20,5 +20,7 @@ CREATE TABLE registros_presenca (
     UNIQUE (matricula, codigo_palestra)
 );
 
+-- Índices para melhor performance em queries
 CREATE INDEX registros_presenca_matricula_idx ON registros_presenca (matricula);
-
+CREATE INDEX registros_presenca_codigo_palestra_idx ON registros_presenca (codigo_palestra);
+CREATE INDEX registros_presenca_matricula_palestra_idx ON registros_presenca (matricula, codigo_palestra);

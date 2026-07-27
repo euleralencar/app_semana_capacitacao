@@ -1,18 +1,134 @@
 {% extends "base.html" %}
 {% block title %}Inscrição · Semana da Capacitação 2026{% endblock %}
 {% block content %}
-<section class="mx-auto max-w-xl">
-  <h1 class="text-3xl font-bold">Inscrição</h1>
-  <p class="mt-2 text-slate-600">Preencha seus dados para participar da Semana da Capacitação.</p>
-  {% if error %}<div class="mt-6 rounded-lg bg-red-50 p-4 text-red-800" role="alert">{{ error }}</div>{% endif %}
-  {% if success %}<div class="mt-6 rounded-lg bg-emerald-50 p-4 text-emerald-800" role="status">{{ success }}</div>{% endif %}
-  <form method="post" class="mt-6 space-y-5 rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-    <label class="block"><span class="text-sm font-medium">Nome completo</span><input required name="nome" value="{{ form_data.nome|default('') }}" maxlength="150" class="field" autocomplete="name"></label>
-    <label class="block"><span class="text-sm font-medium">Matrícula STF</span><input required name="matricula" value="{{ form_data.matricula|default('') }}" maxlength="30" class="field" autocomplete="off"></label>
-    <label class="block"><span class="text-sm font-medium">CPF</span><input required name="cpf" value="{{ form_data.cpf|default('') }}" inputmode="numeric" maxlength="14" class="field" autocomplete="off" placeholder="000.000.000-00"></label>
-    <label class="block"><span class="text-sm font-medium">Secretaria</span><input required name="secretaria" value="{{ form_data.secretaria|default('') }}" maxlength="120" class="field"></label>
-    <button class="button" type="submit">Realizar inscrição</button>
+<section class="mx-auto max-w-md">
+  <div>
+    <h1 class="text-3xl font-bold">Inscrição</h1>
+    <p class="mt-2 text-slate-600">Preencha o formulário para se inscrever na Semana da Capacitação 2026.</p>
+  </div>
+  {% if error %}
+  <div class="mt-6 rounded-lg bg-red-50 p-4 text-red-800 ring-1 ring-red-200">
+    <p class="text-sm font-medium">{{ error }}</p>
+  </div>
+  {% endif %}
+  {% if success %}
+  <div class="mt-6 rounded-lg bg-green-50 p-4 text-green-800 ring-1 ring-green-200">
+    <p class="text-sm font-medium">{{ success }}</p>
+  </div>
+  {% endif %}
+  <form method="post" class="mt-6 space-y-4" id="registration-form">
+    <label class="block">
+      <span class="text-sm font-medium text-slate-700">Nome completo</span>
+      <input 
+        type="text" 
+        name="nome" 
+        class="field" 
+        value="{{ form_data.nome }}" 
+        required
+        minlength="3"
+        maxlength="150"
+        placeholder="Digite seu nome completo">
+    </label>
+    <label class="block">
+      <span class="text-sm font-medium text-slate-700">Matrícula STF</span>
+      <input 
+        type="text" 
+        name="matricula" 
+        class="field" 
+        value="{{ form_data.matricula }}" 
+        required
+        pattern="[A-Z0-9.\-]{3,30}"
+        maxlength="30"
+        placeholder="Ex: ABC-123">
+    </label>
+    <label class="block">
+      <span class="text-sm font-medium text-slate-700">CPF</span>
+      <input 
+        type="text" 
+        name="cpf" 
+        id="cpf"
+        class="field" 
+        value="{{ form_data.cpf }}" 
+        required
+        inputmode="numeric"
+        placeholder="000.000.000-00"
+        maxlength="14">
+      <span id="cpf-error" class="text-xs text-red-600 hidden">CPF inválido</span>
+    </label>
+    <label class="block">
+      <span class="text-sm font-medium text-slate-700">Secretaria</span>
+      <input 
+        type="text" 
+        name="secretaria" 
+        class="field" 
+        value="{{ form_data.secretaria }}" 
+        required
+        minlength="2"
+        maxlength="120"
+        placeholder="Digite sua secretaria">
+    </label>
+    <button type="submit" class="button w-full">Inscrever-se</button>
   </form>
 </section>
-{% endblock %}
+<script>
+  // Validação em tempo real do CPF
+  const cpfInput = document.getElementById('cpf');
+  const cpfError = document.getElementById('cpf-error');
 
+  function formatCPF(value) {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+      .substring(0, 14);
+  }
+
+  function isValidCPF(cpf) {
+    const cleaned = cpf.replace(/\D/g, '');
+    if (cleaned.length !== 11 || cleaned === cleaned[0].repeat(11)) return false;
+    
+    let sum = 0;
+    let remainder;
+    
+    for (let i = 1; i <= 9; i++) {
+      sum += parseInt(cleaned.substring(i - 1, i)) * (11 - i);
+    }
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cleaned.substring(9, 10))) return false;
+    
+    sum = 0;
+    for (let i = 1; i <= 10; i++) {
+      sum += parseInt(cleaned.substring(i - 1, i)) * (12 - i);
+    }
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cleaned.substring(10, 11))) return false;
+    
+    return true;
+  }
+
+  cpfInput.addEventListener('input', function() {
+    this.value = formatCPF(this.value);
+  });
+
+  cpfInput.addEventListener('blur', function() {
+    if (this.value) {
+      const isValid = isValidCPF(this.value);
+      cpfError.classList.toggle('hidden', isValid);
+      this.classList.toggle('border-red-500', !isValid);
+    }
+  });
+
+  // Validação do formulário
+  document.getElementById('registration-form').addEventListener('submit', function(e) {
+    if (cpfInput.value && !isValidCPF(cpfInput.value)) {
+      e.preventDefault();
+      cpfError.classList.remove('hidden');
+      cpfInput.classList.add('border-red-500');
+      cpfInput.focus();
+    }
+  });
+</script>
+{% endblock %}
