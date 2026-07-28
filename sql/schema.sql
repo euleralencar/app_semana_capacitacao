@@ -8,8 +8,17 @@ CREATE TABLE participantes (
 
 CREATE TABLE palestras (
     codigo_palestra VARCHAR(30) PRIMARY KEY,
-    titulo VARCHAR(200) NOT NULL,
-    pontos INTEGER NOT NULL CHECK (pontos >= 0)
+    data_palestra DATE NOT NULL,
+    horario_inicio TIME NOT NULL,
+    horario_fim TIME NOT NULL,
+    titulo VARCHAR(255) NOT NULL,
+    palestrante VARCHAR(500),
+    cargo VARCHAR(255),
+    instituicao VARCHAR(150),
+    disciplina VARCHAR(150),
+    trilha VARCHAR(100),
+    pontos INTEGER NOT NULL CHECK (pontos >= 0) DEFAULT 25,
+    data_criacao TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE registros_presenca (
@@ -21,6 +30,8 @@ CREATE TABLE registros_presenca (
 );
 
 -- Índices para melhor performance em queries
+CREATE INDEX palestras_data_idx ON palestras (data_palestra);
+CREATE INDEX palestras_trilha_idx ON palestras (trilha);
 CREATE INDEX registros_presenca_matricula_idx ON registros_presenca (matricula);
 CREATE INDEX registros_presenca_codigo_palestra_idx ON registros_presenca (codigo_palestra);
 CREATE INDEX registros_presenca_matricula_palestra_idx ON registros_presenca (matricula, codigo_palestra);

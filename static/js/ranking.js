@@ -5,6 +5,13 @@ const rankingStatus = document.querySelector('#ranking-status');
 // Cache para evitar re-renders desnecessários
 let lastRankingData = null;
 
+// Verificar se está dentro do horário de funcionamento do evento (9h às 20h)
+function isEventHours() {
+  const now = new Date();
+  const hour = now.getHours();
+  return hour >= 9 && hour < 20;
+}
+
 async function loadRanking() {
   const matricula = searchInput.value.trim();
   try {
@@ -71,5 +78,10 @@ searchInput.addEventListener('input', () => {
 // Carregamento inicial
 refreshRanking();
 
-// Auto-atualização reduzida com verificação de cache
-setInterval(refreshRanking, 5000);
+// Auto-atualização a cada 30 minutos, apenas durante horário do evento (9h às 20h)
+// Fora desse horário, o usuário pode fazer refresh manual para atualizar
+setInterval(() => {
+  if (isEventHours()) {
+    refreshRanking();
+  }
+}, 1800000); // 30 minutos em milissegundos
