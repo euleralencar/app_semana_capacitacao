@@ -6,6 +6,7 @@
 - Banco de dados: **Supabase (PostgreSQL)**
 - Hospedagem: **Vercel**
 - Atualização do ranking: consulta automática a cada poucos segundos.
+- Configuração local: arquivo `.env` carregado com `python-dotenv`; credenciais não são versionadas.
 
 ### 2. Funcionalidades
 
@@ -100,16 +101,19 @@ semana-capacitacao-2026/
 ├── vercel.json
 ├── .env.example
 ├── .gitignore
+├── agents.MD
 └── README.md
 ```
 
-### 5. Etapas de desenvolvimento
+### 5. Andamento do desenvolvimento
 
-1. Criar o projeto Supabase e executar o esquema SQL.
-2. Implementar conexão segura e consultas ao banco.
-3. Desenvolver as telas de inscrição, check-in e ranking.
-4. Aplicar validações de dados e mensagens de retorno.
-5. Implementar busca de posição por matrícula.
-6. Criar lista inicial de palestras e respectivas pontuações.
-7. Configurar variáveis de ambiente e deploy na Vercel.
-8. Testar cenários de cadastro repetido, código inválido, check-in duplicado, empate e busca no ranking.
+- [x] Criar o projeto Supabase e executar o esquema SQL.
+- [x] Criar a lista inicial de palestras e respectivas pontuações.
+- [x] Implementar conexão segura e consultas ao banco por `DATABASE_URL`.
+- [x] Desenvolver as telas de inscrição, check-in e ranking.
+- [x] Aplicar validações de CPF, matrícula, palestra e mensagens de retorno.
+- [x] Implementar busca de posição por matrícula e atualização automática do ranking a cada 5 segundos.
+- [x] Configurar ambiente local, validar dependências e testar a aplicação localmente.
+- [x] Inicializar o Git e publicar a base do projeto no GitHub.
+- [ ] Configurar as variáveis `DATABASE_URL` e `FLASK_SECRET_KEY` na Vercel e realizar o deploy.
+- [ ] Executar os testes finais: cadastro repetido, código inválido, check-in duplicado, empate e busca no ranking.

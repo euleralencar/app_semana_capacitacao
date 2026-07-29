@@ -1,9 +1,11 @@
-import os
 import logging
+import os
 from datetime import timedelta
+from pathlib import Path
 
-from flask import Flask, jsonify, redirect, render_template, request, url_for, make_response
-from psycopg.errors import UniqueViolation, IntegrityError
+from dotenv import load_dotenv
+from flask import Flask, jsonify, make_response, redirect, render_template, request, url_for
+from psycopg.errors import IntegrityError
 
 from database import Database, DatabaseConfigurationError
 from validators import (
@@ -15,10 +17,16 @@ from validators import (
 
 # Configurar logging
 logger = logging.getLogger(__name__)
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
 
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(
+        __name__,
+        template_folder=str(BASE_DIR / "templates"),
+        static_folder=str(BASE_DIR / "static"),
+    )
     app.config.update(
         SECRET_KEY=os.getenv("FLASK_SECRET_KEY", "desenvolvimento-altere-esta-chave"),
         PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
@@ -186,3 +194,7 @@ def create_app():
 
 
 app = create_app()
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
