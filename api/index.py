@@ -10,3 +10,7 @@ from app import app as flask_app
 app = flask_app
 application = flask_app
 
+
+def handler(request, context):
+    return app(request.environ, context)
+
