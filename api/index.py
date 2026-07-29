@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -5,12 +6,9 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from app import app as flask_app
+from app import app
 
-app = flask_app
-application = flask_app
+os.environ.setdefault("PYTHONPATH", str(ROOT_DIR))
 
-
-def handler(request, context):
-    return app(request.environ, context)
+application = app
 
