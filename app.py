@@ -105,10 +105,13 @@ def create_app():
             if not session_exists:
                 raise ValidationError("Código de palestra inválido.")
 
+            # Inserção defensiva para concorrência: se duas requisições chegarem ao mesmo tempo
+            # para o mesmo participante e palestra, a restrição UNIQUE do banco evita duplicidade.
             db.execute(
                 """
                 INSERT INTO registros_presenca (matricula, codigo_palestra)
                 VALUES (%(matricula)s, %(codigo_palestra)s)
+                ON CONFLICT (matricula, codigo_palestra) DO NOTHING
                 """,
                 attendance,
             )
