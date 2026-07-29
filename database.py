@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 
 import psycopg
 from psycopg.rows import dict_row
@@ -21,7 +22,13 @@ class Database:
         return cls(connection_url)
 
     def _connect(self):
-        return psycopg.connect(self.connection_url)
+        url = self.connection_url.strip()
+        if not url:
+            raise DatabaseConfigurationError("DATABASE_URL vazia.")
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme not in {"postgres", "postgresql"}:
+            raise DatabaseConfigurationError("DATABASE_URL inválida.")
+        return psycopg.connect(url)
 
     def execute(self, query, params=None):
         with self._connect() as connection:
