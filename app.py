@@ -78,7 +78,7 @@ def create_app():
             return render_template(
                 "inscricao.html",
                 form_data=form_data,
-                error="Erro interno do servidor.",
+                error=f"Erro interno do servidor: {error}",
             ), 500
 
         return render_template("inscricao.html", form_data={}, success="Inscrição realizada com sucesso!")
@@ -134,7 +134,7 @@ def create_app():
             return render_template(
                 "checkin.html",
                 form_data=form_data,
-                error="Erro interno do servidor.",
+                error=f"Erro interno do servidor: {error}",
             ), 500
 
         return render_template("checkin.html", form_data={}, success="Check-in registrado com sucesso!")
@@ -183,7 +183,7 @@ def create_app():
             return jsonify({"error": "O banco de dados ainda não foi configurado."}), 503
         except Exception as error:
             logger.exception("Unexpected error in ranking API")
-            return jsonify({"error": "Erro interno do servidor."}), 500
+            return jsonify({"error": f"Erro interno do servidor: {error}"}), 500
 
         # Adicionar cache headers para reduzir requisições desnecessárias
         response = make_response(jsonify({"ranking": rows}))
