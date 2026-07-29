@@ -8,7 +8,5 @@ if str(ROOT_DIR) not in sys.path:
 
 from app import app
 
-os.environ.setdefault("PYTHONPATH", str(ROOT_DIR))
-
 application = app
 
