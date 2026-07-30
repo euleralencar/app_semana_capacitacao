@@ -10,6 +10,7 @@ from psycopg.errors import IntegrityError
 from database import Database, DatabaseConfigurationError
 from validators import (
     ValidationError,
+    normalize_cpf,
     normalize_ranking_search,
     validate_checkin,
     validate_registration,
@@ -141,6 +142,68 @@ def create_app():
             ), 500
 
         return render_template("checkin.html", form_data={}, success="Check-in registrado com sucesso!")
+
+    @app.route("/consulta-cursos", methods=["GET", "POST"])
+    def consulta_cursos():
+        form_data = {"cpf": ""}
+        if request.method == "GET":
+            return render_template("consulta_cursos.html", form_data=form_data)
+
+        form_data.update(request.form.to_dict())
+        try:
+            cpf = normalize_cpf(form_data.get("cpf", ""))
+            db = database()
+            participant = db.fetch_one(
+                """
+                SELECT matricula, cpf, nome
+                FROM participantes
+                WHERE cpf = %(cpf)s
+                """,
+                {"cpf": cpf},
+            )
+            if not participant:
+                raise ValidationError("Nenhum participante encontrado para este CPF.")
+
+            cursos = db.fetch_all(
+                """
+                SELECT rp.codigo_palestra, p.titulo, p.pontos, rp.timestamp
+                FROM registros_presenca rp
+                JOIN palestras p ON p.codigo_palestra = rp.codigo_palestra
+                WHERE rp.matricula = %(matricula)s
+                ORDER BY rp.timestamp ASC, p.titulo ASC
+                """,
+                {"matricula": participant["matricula"]},
+            )
+        except ValidationError as error:
+            logger.warning(f"Validation error in course lookup: {str(error)}")
+            return render_template("consulta_cursos.html", form_data=form_data, error=str(error)), 400
+        except DatabaseConfigurationError:
+            logger.error("Database not configured in course lookup")
+            return render_template(
+                "consulta_cursos.html",
+                form_data=form_data,
+                error="O banco de dados ainda não foi configurado.",
+            ), 503
+        except Exception as error:
+            logger.exception("Unexpected error in course lookup")
+            return render_template(
+                "consulta_cursos.html",
+                form_data=form_data,
+                error=f"Erro interno do servidor: {error}",
+            ), 500
+
+        total_pontos = sum(curso.get("pontos", 0) for curso in cursos)
+        return render_template(
+            "consulta_cursos.html",
+            form_data={"cpf": cpf},
+            result={
+                "nome": participant["nome"],
+                "cpf": participant["cpf"],
+                "matricula": participant["matricula"],
+                "cursos": cursos,
+                "total_pontos": total_pontos,
+            },
+        )
 
     @app.get("/ranking")
     def ranking():
