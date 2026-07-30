@@ -1,6 +1,7 @@
 const searchInput = document.querySelector('#ranking-search');
 const rankingBody = document.querySelector('#ranking-body');
 const rankingStatus = document.querySelector('#ranking-status');
+const rankingLoading = document.querySelector('#ranking-loading');
 
 // Cache para evitar re-renders desnecessários
 let lastRankingData = null;
@@ -13,6 +14,7 @@ function isEventHours() {
 }
 
 async function loadRanking() {
+  rankingLoading?.classList.remove('hidden');
   const matricula = searchInput.value.trim();
   try {
     const response = await fetch(`/api/ranking?matricula=${encodeURIComponent(matricula)}`, { 
@@ -55,6 +57,8 @@ async function loadRanking() {
   } catch (error) {
     rankingStatus.textContent = `Erro: ${error.message}`;
     console.error(`Error loading ranking: ${error.message}`);
+  } finally {
+    rankingLoading?.classList.add('hidden');
   }
 }
 

@@ -9,8 +9,24 @@
   <form method="post" class="mt-6 space-y-5 rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
     <label class="block"><span class="text-sm font-medium">Matrícula STF</span><input required name="matricula" value="{{ form_data.matricula|default('') }}" maxlength="30" class="field" autocomplete="off"></label>
     <label class="block"><span class="text-sm font-medium">Código da palestra</span><input required name="codigo_palestra" value="{{ form_data.codigo_palestra|default('') }}" maxlength="30" class="field" placeholder="CAP-101" autocomplete="off"></label>
-    <button class="button" type="submit">Registrar check-in</button>
+    <div class="flex flex-wrap items-center gap-3">
+      <button class="button" type="submit">Registrar check-in</button>
+      <div id="checkin-loading" class="spinner hidden" role="status">Enviando...</div>
+    </div>
   </form>
 </section>
+<script>
+  const checkinForm = document.querySelector('form[method="post"]');
+  const checkinLoading = document.getElementById('checkin-loading');
+  const checkinButton = checkinForm?.querySelector('button[type="submit"]');
+
+  checkinForm?.addEventListener('submit', () => {
+    checkinLoading?.classList.remove('hidden');
+    if (checkinButton) {
+      checkinButton.disabled = true;
+      checkinButton.textContent = 'Enviando...';
+    }
+  });
+</script>
 {% endblock %}
 

@@ -17,7 +17,10 @@
     <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
     {% endif %}
 
-    <button type="submit" class="button">Consultar</button>
+    <div class="flex flex-wrap items-center gap-3">
+      <button type="submit" class="button">Consultar</button>
+      <div id="consulta-loading" class="spinner hidden" role="status">Consultando...</div>
+    </div>
   </form>
 
   {% if result %}
@@ -57,4 +60,17 @@
   </div>
   {% endif %}
 </section>
+<script>
+  const consultaForm = document.querySelector('form[method="post"]');
+  const consultaLoading = document.getElementById('consulta-loading');
+  const consultaButton = consultaForm?.querySelector('button[type="submit"]');
+
+  consultaForm?.addEventListener('submit', () => {
+    consultaLoading?.classList.remove('hidden');
+    if (consultaButton) {
+      consultaButton.disabled = true;
+      consultaButton.textContent = 'Consultando...';
+    }
+  });
+</script>
 {% endblock %}
