@@ -3,13 +3,14 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values, find_dotenv
 from flask import Flask, jsonify, make_response, redirect, render_template, request, url_for
 from psycopg.errors import IntegrityError
 
 from database import Database, DatabaseConfigurationError
 from validators import (
     ValidationError,
+    normalize_cpf,
     normalize_ranking_search,
     validate_checkin,
     validate_registration,
@@ -18,7 +19,11 @@ from validators import (
 # Configurar logging
 logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
-load_dotenv(BASE_DIR / ".env")
+env_path = find_dotenv(usecwd=True) or BASE_DIR / ".env"
+if env_path:
+    for key, value in dotenv_values(env_path).items():
+        if value is not None:
+            os.environ[key] = value
 
 
 def create_app():
@@ -59,9 +64,15 @@ def create_app():
             logger.warning(f"Validation error in registration: {str(error)}")
             return render_template("inscricao.html", form_data=form_data, error=str(error)), 400
         except IntegrityError as error:
-            message = "Esta matrícula STF já está cadastrada."
+            message = (
+                "Esta matrícula STF já está cadastrada. Procure a equipe da organização "
+                "se precisar alterar alguma informação da inscrição."
+            )
             if error.diag.constraint_name == "participantes_cpf_key":
-                message = "Este CPF já está cadastrado."
+                message = (
+                    "Este CPF já está cadastrado. Procure a equipe da organização "
+                    "se precisar alterar alguma informação da inscrição."
+                )
                 logger.warning(f"Duplicate CPF attempt: {form_data.get('cpf')[:3]}***")
             else:
                 logger.warning(f"Duplicate matricula attempt: {form_data.get('matricula')}")
@@ -141,6 +152,70 @@ def create_app():
             ), 500
 
         return render_template("checkin.html", form_data={}, success="Check-in registrado com sucesso!")
+
+    @app.route("/consulta-cursos", methods=["GET", "POST"])
+    def consulta_cursos():
+        form_data = {"cpf": ""}
+        if request.method == "GET":
+            return render_template("consulta_cursos.html", form_data=form_data)
+
+        form_data.update(request.form.to_dict())
+        try:
+            cpf = normalize_cpf(form_data.get("cpf", ""))
+            db = database()
+            participant = db.fetch_one(
+                """
+                SELECT matricula, cpf, nome
+                FROM participantes
+                WHERE LPAD(REGEXP_REPLACE(cpf::text, '\\D', '', 'g'), 11, '0') = %(cpf)s
+                ORDER BY data_cadastro DESC, matricula DESC
+                LIMIT 1
+                """,
+                {"cpf": cpf},
+            )
+            if not participant:
+                raise ValidationError("Nenhum participante encontrado para este CPF.")
+
+            cursos = db.fetch_all(
+                """
+                SELECT rp.codigo_palestra, p.titulo, p.trilha, p.pontos, rp.timestamp
+                FROM registros_presenca rp
+                JOIN palestras p ON p.codigo_palestra = rp.codigo_palestra
+                WHERE rp.matricula = %(matricula)s
+                ORDER BY rp.timestamp ASC, p.titulo ASC
+                """,
+                {"matricula": participant["matricula"]},
+            )
+        except ValidationError as error:
+            logger.warning(f"Validation error in course lookup: {str(error)}")
+            return render_template("consulta_cursos.html", form_data=form_data, error=str(error)), 400
+        except DatabaseConfigurationError:
+            logger.error("Database not configured in course lookup")
+            return render_template(
+                "consulta_cursos.html",
+                form_data=form_data,
+                error="O banco de dados ainda não foi configurado.",
+            ), 503
+        except Exception as error:
+            logger.exception("Unexpected error in course lookup")
+            return render_template(
+                "consulta_cursos.html",
+                form_data=form_data,
+                error=f"Erro interno do servidor: {error}",
+            ), 500
+
+        total_pontos = sum(curso.get("pontos", 0) for curso in cursos)
+        return render_template(
+            "consulta_cursos.html",
+            form_data={"cpf": cpf},
+            result={
+                "nome": participant["nome"],
+                "cpf": participant["cpf"],
+                "matricula": participant["matricula"],
+                "cursos": cursos,
+                "total_pontos": total_pontos,
+            },
+        )
 
     @app.get("/ranking")
     def ranking():
