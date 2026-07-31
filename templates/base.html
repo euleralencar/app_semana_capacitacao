@@ -26,6 +26,35 @@
     <main class="mx-auto max-w-5xl px-5 py-10">
       {% block content %}{% endblock %}
     </main>
+    <script>
+      document.addEventListener('submit', function (event) {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== 'post') {
+          return;
+        }
+
+        const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+        if (!submitButton || submitButton.dataset.spinnerEnabled === 'true') {
+          return;
+        }
+
+        submitButton.dataset.spinnerEnabled = 'true';
+
+        if (submitButton.tagName === 'INPUT') {
+          submitButton.dataset.originalValue = submitButton.value;
+          submitButton.value = submitButton.dataset.loadingText || 'Processando...';
+        } else {
+          submitButton.dataset.originalHtml = submitButton.innerHTML;
+          const loadingText = submitButton.dataset.loadingText || 'Processando...';
+          submitButton.innerHTML =
+            '<span class="btn-spinner" aria-hidden="true"></span>' +
+            '<span>' + loadingText + '</span>';
+        }
+
+        submitButton.disabled = true;
+        submitButton.classList.add('button--loading');
+      }, true);
+    </script>
   </body>
 </html>
 
