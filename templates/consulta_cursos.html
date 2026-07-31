@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Consulta de cursos · Semana da Capacitação 2026{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-2xl">
+  <div>
+    <h1 class="text-3xl font-bold">Consulta de cursos</h1>
+    <p class="mt-2 text-slate-600">Informe um CPF por vez para consultar seus cursos e sua pontuação.</p>
+    <p class="mt-1 text-sm text-slate-500">Esta consulta tem finalidade informativa para verificação do próprio histórico.</p>
+  </div>
+
+  {% if error %}
+  <div class="mt-6 rounded-lg bg-red-50 p-4 text-red-800 ring-1 ring-red-200">
+    <p class="text-sm font-medium">{{ error }}</p>
+  </div>
+  {% endif %}
+
+  <form method="post" class="mt-6 space-y-4">
+    <label class="block">
+      <span class="text-sm font-medium text-slate-700">CPF</span>
+      <input type="text" name="cpf" class="field" value="{{ form_data.cpf }}" required placeholder="000.000.000-00">
+    </label>
+    <button type="submit" class="button w-full">Consultar</button>
+  </form>
+
+  {% if result %}
+  <div class="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-xl font-semibold text-slate-900">{{ result.nome }}</h2>
+        <p class="text-sm text-slate-600">CPF: {{ result.cpf }} · Matrícula: {{ result.matricula }}</p>
+      </div>
+      <div class="rounded-lg bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700">
+        Total de pontos: {{ result.total_pontos }}
+      </div>
+    </div>
+
+    {% if result.cursos %}
+    <div class="mt-6 overflow-hidden rounded-lg border border-slate-200">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold text-slate-700">Código</th>
+            <th class="px-4 py-3 text-left font-semibold text-slate-700">Palestra</th>
+            <th class="px-4 py-3 text-left font-semibold text-slate-700">Trilha</th>
+            <th class="px-4 py-3 text-left font-semibold text-slate-700">Pontos</th>
+            <th class="px-4 py-3 text-left font-semibold text-slate-700">Data</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 bg-white">
+          {% for curso in result.cursos %}
+          <tr>
+            <td class="px-4 py-3 text-slate-700">{{ curso.codigo_palestra }}</td>
+            <td class="px-4 py-3 text-slate-700">{{ curso.titulo }}</td>
+            <td class="px-4 py-3 text-slate-700">{{ curso.trilha or '-' }}</td>
+            <td class="px-4 py-3 text-slate-700">{{ curso.pontos }}</td>
+            <td class="px-4 py-3 text-slate-700">{{ curso.timestamp.strftime('%d/%m/%Y') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="mt-6 text-sm text-slate-500">Nenhum curso encontrado para este CPF.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

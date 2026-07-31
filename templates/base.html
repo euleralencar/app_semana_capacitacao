@@ -18,6 +18,7 @@
         <div class="flex gap-4 text-sm font-medium text-slate-600">
           <a class="hover:text-indigo-700" href="{{ url_for('inscricao') }}">Inscrição</a>
           <a class="hover:text-indigo-700" href="{{ url_for('checkin') }}">Check-in</a>
+          <a class="hover:text-indigo-700" href="{{ url_for('consulta_cursos') }}">Consulta por CPF</a>
           <a class="hover:text-indigo-700" href="{{ url_for('ranking') }}">Ranking</a>
         </div>
       </nav>
@@ -25,6 +26,105 @@
     <main class="mx-auto max-w-5xl px-5 py-10">
       {% block content %}{% endblock %}
     </main>
+    <script>
+      function setSubmitLoadingState(submitButton) {
+        if (!submitButton || submitButton.dataset.spinnerEnabled === 'true') {
+          return;
+        }
+
+        submitButton.dataset.spinnerEnabled = 'true';
+        if (submitButton.tagName === 'INPUT') {
+          submitButton.dataset.originalValue = submitButton.value;
+          submitButton.value = submitButton.dataset.loadingText || 'Processando...';
+        } else {
+          submitButton.dataset.originalHtml = submitButton.innerHTML;
+          const loadingText = submitButton.dataset.loadingText || 'Processando...';
+          submitButton.innerHTML =
+            '<span class="btn-spinner" aria-hidden="true"></span>' +
+            '<span>' + loadingText + '</span>';
+        }
+
+        submitButton.disabled = true;
+        submitButton.classList.add('button--loading');
+      }
+
+      function resetSubmitLoadingState(submitButton) {
+        if (!submitButton) {
+          return;
+        }
+
+        if (submitButton.tagName === 'INPUT' && submitButton.dataset.originalValue) {
+          submitButton.value = submitButton.dataset.originalValue;
+        }
+        if (submitButton.tagName !== 'INPUT' && submitButton.dataset.originalHtml) {
+          submitButton.innerHTML = submitButton.dataset.originalHtml;
+        }
+
+        submitButton.disabled = false;
+        submitButton.classList.remove('button--loading');
+        delete submitButton.dataset.spinnerEnabled;
+      }
+
+      function showFormRequestError(form, message) {
+        const previous = form.querySelector('.form-request-feedback');
+        if (previous) {
+          previous.remove();
+        }
+
+        const feedback = document.createElement('div');
+        feedback.className = 'form-request-feedback mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800 ring-1 ring-red-200';
+        feedback.setAttribute('role', 'alert');
+        feedback.textContent = message;
+        form.prepend(feedback);
+      }
+
+      document.addEventListener('submit', async function (event) {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== 'post') {
+          return;
+        }
+
+        if (event.defaultPrevented || !form.checkValidity()) {
+          return;
+        }
+
+        event.preventDefault();
+
+        const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+        setSubmitLoadingState(submitButton);
+
+        const timeoutMs = Number(form.dataset.requestTimeoutMs || 15000);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(function () {
+          controller.abort();
+        }, timeoutMs);
+
+        try {
+          const response = await fetch(form.action || window.location.href, {
+            method: 'POST',
+            body: new FormData(form),
+            signal: controller.signal,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+
+          const html = await response.text();
+          document.open();
+          document.write(html);
+          document.close();
+        } catch (error) {
+          if (error.name === 'AbortError') {
+            showFormRequestError(form, 'Tempo limite excedido. Tente novamente em instantes.');
+          } else {
+            showFormRequestError(form, 'Não foi possível enviar o formulário. Verifique sua conexão e tente novamente.');
+          }
+          resetSubmitLoadingState(submitButton);
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      });
+    </script>
   </body>
 </html>
 
