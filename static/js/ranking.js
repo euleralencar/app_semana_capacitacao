@@ -39,10 +39,10 @@ async function loadRanking() {
       row.innerHTML = '<td class="px-5 py-5 text-slate-500" colspan="3">Nenhum participante encontrado.</td>';
       rankingBody.append(row);
     } else {
-      payload.ranking.forEach(({ posicao, matricula: itemMatricula, pontos }) => {
+      payload.ranking.forEach(({ posicao, matricula: itemMatricula, cpf_mascarado: cpfMascarado, pontos }) => {
         const row = document.createElement('tr');
         row.className = 'border-t border-slate-100';
-        [posicao, itemMatricula, pontos].forEach((value, index) => {
+        [posicao, `${itemMatricula} (${cpfMascarado})`, pontos].forEach((value, index) => {
           const cell = document.createElement('td');
           cell.className = `px-5 py-4${index === 2 ? ' text-right font-semibold' : ''}`;
           cell.textContent = value;

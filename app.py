@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from datetime import timedelta
 from pathlib import Path
 
@@ -118,7 +119,7 @@ def create_app():
 
     @app.route("/checkin", methods=["GET", "POST"])
     def checkin():
-        form_data = {"matricula": "", "codigo_palestra": ""}
+        form_data = {"cpf": "", "codigo_palestra": ""}
         if request.method == "GET":
             return render_template("checkin.html", form_data=form_data)
 
@@ -127,10 +128,17 @@ def create_app():
             attendance = validate_checkin(form_data)
             db = database()
             participant_exists = db.fetch_one(
-                "SELECT 1 FROM participantes WHERE matricula = %(matricula)s", attendance
+                """
+                SELECT matricula, nome, cpf
+                FROM participantes
+                WHERE LPAD(REGEXP_REPLACE(cpf::text, '\\D', '', 'g'), 11, '0') = %(cpf)s
+                ORDER BY data_cadastro DESC, matricula DESC
+                LIMIT 1
+                """,
+                attendance,
             )
             if not participant_exists:
-                raise ValidationError("Matrícula STF não encontrada. Faça a inscrição antes do check-in.")
+                raise ValidationError("CPF não encontrado. Faça a inscrição antes do check-in.")
 
             session_exists = db.fetch_one(
                 "SELECT 1 FROM palestras WHERE codigo_palestra = %(codigo_palestra)s", attendance
@@ -138,28 +146,28 @@ def create_app():
             if not session_exists:
                 raise ValidationError("Código de palestra inválido.")
 
+            attendance["matricula"] = participant_exists["matricula"]
+
             # Inserção defensiva para concorrência: se duas requisições chegarem ao mesmo tempo
             # para o mesmo participante e palestra, a restrição UNIQUE do banco evita duplicidade.
-            db.execute(
+            inserted = db.fetch_one(
                 """
                 INSERT INTO registros_presenca (matricula, codigo_palestra)
                 VALUES (%(matricula)s, %(codigo_palestra)s)
                 ON CONFLICT (matricula, codigo_palestra) DO NOTHING
+                RETURNING id
                 """,
                 attendance,
             )
-        except ValidationError as error:
-            logger.warning(f"Validation error in check-in: {str(error)}")
-            return render_template("checkin.html", form_data=form_data, error=str(error)), 400
-        except IntegrityError as error:
-            if error.diag.constraint_name == "registros_presenca_matricula_codigo_palestra_key":
-                logger.warning(f"Duplicate check-in attempt: {form_data.get('matricula')} - {form_data.get('codigo_palestra')}")
+            if not inserted:
                 return render_template(
                     "checkin.html",
                     form_data=form_data,
                     error="Este check-in já foi registrado para esta palestra.",
                 ), 409
-            raise
+        except ValidationError as error:
+            logger.warning(f"Validation error in check-in: {str(error)}")
+            return render_template("checkin.html", form_data=form_data, error=str(error)), 400
         except DatabaseConfigurationError:
             logger.error("Database not configured in check-in")
             return render_template(
@@ -173,7 +181,7 @@ def create_app():
                 error=f"Erro interno do servidor: {error}",
             ), 500
 
-        return render_template("checkin.html", form_data={}, success="Check-in registrado com sucesso!")
+        return render_template("checkin.html", form_data={"cpf": "", "codigo_palestra": ""}, success="Check-in registrado com sucesso!")
 
     @app.route("/consulta-cursos", methods=["GET", "POST"])
     def consulta_cursos():
@@ -245,35 +253,48 @@ def create_app():
 
     @app.get("/api/ranking")
     def ranking_api():
-        matricula = request.args.get("matricula", "").strip()
+        search_term = request.args.get("matricula", "").strip()
         try:
-            if matricula:
-                matricula = normalize_ranking_search(matricula)
+            if search_term:
+                search_term = normalize_ranking_search(search_term)
             rows = database().fetch_all(
                 """
                 WITH pontuacao AS (
                     SELECT
                         rp.matricula,
+                        LPAD(REGEXP_REPLACE(pa.cpf::text, '\\D', '', 'g'), 11, '0') AS cpf,
                         SUM(p.pontos)::integer AS pontos,
                         MIN(rp.timestamp) AS primeiro_checkin
                     FROM registros_presenca rp
+                    JOIN participantes pa ON pa.matricula = rp.matricula
                     JOIN palestras p ON p.codigo_palestra = rp.codigo_palestra
-                    GROUP BY rp.matricula
+                    GROUP BY rp.matricula, pa.cpf
                 ), ranking AS (
                     SELECT
                         ROW_NUMBER() OVER (
                             ORDER BY pontos DESC, primeiro_checkin ASC, matricula ASC
                         ) AS posicao,
                         matricula,
+                        cpf,
+                        CONCAT(
+                            SUBSTRING(cpf, 1, 3),
+                            '.***.***-',
+                            SUBSTRING(cpf, 10, 2)
+                        ) AS cpf_mascarado,
                         pontos
                     FROM pontuacao
                 )
-                SELECT posicao, matricula, pontos
+                SELECT posicao, matricula, cpf_mascarado, pontos
                 FROM ranking
-                WHERE (%(matricula)s = '' OR matricula = %(matricula)s)
+                WHERE (
+                    %(search_term)s = ''
+                    OR matricula ILIKE CONCAT('%%', %(search_term)s, '%%')
+                )
                 ORDER BY posicao
                 """,
-                {"matricula": matricula},
+                {
+                    "search_term": search_term,
+                },
             )
         except ValidationError as error:
             logger.warning(f"Validation error in ranking API: {str(error)}")

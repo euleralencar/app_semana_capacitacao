@@ -101,6 +101,6 @@ def validate_checkin(data):
     if not re.fullmatch(r"[A-Z0-9-]{3,30}", codigo_palestra):
         raise ValidationError("Informe um código de palestra válido.")
     return {
-        "matricula": normalize_matricula(data.get("matricula", "")),
+        "cpf": normalize_cpf(data.get("cpf", "")),
         "codigo_palestra": codigo_palestra,
     }
