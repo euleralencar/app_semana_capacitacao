@@ -9,6 +9,7 @@ from psycopg.errors import IntegrityError
 
 from database import Database, DatabaseConfigurationError
 from validators import (
+    SECRETARIA_OPTIONS,
     ValidationError,
     normalize_cpf,
     normalize_ranking_search,
@@ -48,7 +49,11 @@ def create_app():
     def inscricao():
         form_data = {"nome": "", "matricula": "", "cpf": "", "secretaria": ""}
         if request.method == "GET":
-            return render_template("inscricao.html", form_data=form_data)
+            return render_template(
+                "inscricao.html",
+                form_data=form_data,
+                secretarias=SECRETARIA_OPTIONS,
+            )
 
         form_data.update(request.form.to_dict())
         try:
@@ -62,7 +67,12 @@ def create_app():
             )
         except ValidationError as error:
             logger.warning(f"Validation error in registration: {str(error)}")
-            return render_template("inscricao.html", form_data=form_data, error=str(error)), 400
+            return render_template(
+                "inscricao.html",
+                form_data=form_data,
+                secretarias=SECRETARIA_OPTIONS,
+                error=str(error),
+            ), 400
         except IntegrityError as error:
             message = (
                 "Esta matrícula STF já está cadastrada. Procure a equipe da organização "
@@ -76,12 +86,18 @@ def create_app():
                 logger.warning(f"Duplicate CPF attempt: {form_data.get('cpf')[:3]}***")
             else:
                 logger.warning(f"Duplicate matricula attempt: {form_data.get('matricula')}")
-            return render_template("inscricao.html", form_data=form_data, error=message), 409
+            return render_template(
+                "inscricao.html",
+                form_data=form_data,
+                secretarias=SECRETARIA_OPTIONS,
+                error=message,
+            ), 409
         except DatabaseConfigurationError:
             logger.error("Database not configured in registration")
             return render_template(
                 "inscricao.html",
                 form_data=form_data,
+                secretarias=SECRETARIA_OPTIONS,
                 error="O banco de dados ainda não foi configurado.",
             ), 503
         except Exception as error:
@@ -89,10 +105,16 @@ def create_app():
             return render_template(
                 "inscricao.html",
                 form_data=form_data,
+                secretarias=SECRETARIA_OPTIONS,
                 error=f"Erro interno do servidor: {error}",
             ), 500
 
-        return render_template("inscricao.html", form_data={}, success="Inscrição realizada com sucesso!")
+        return render_template(
+            "inscricao.html",
+            form_data={"nome": "", "matricula": "", "cpf": "", "secretaria": ""},
+            secretarias=SECRETARIA_OPTIONS,
+            success="Inscrição realizada com sucesso!",
+        )
 
     @app.route("/checkin", methods=["GET", "POST"])
     def checkin():
